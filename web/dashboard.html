@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrandGuard - Brand Mention Tracker</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: Inter, system-ui, Arial, sans-serif;
+            background: #1a1a1a; color: #e5e5e5;
+            line-height: 1.6; padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #fff; margin-bottom: 0.5rem; }
+        .dashboard { 
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 2rem; margin-top: 2rem;
+        }
+        .panel { background: #2a2a2a; border-radius: 8px; padding: 1.5rem; }
+        .panel h2 { color: #fff; margin-bottom: 1rem; }
+        .mention-card { 
+            background: #333; border: 1px solid #444;
+            border-radius: 6px; padding: 1rem; margin-bottom: 1rem;
+        }
+        .mention-header { 
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 0.5rem;
+        }
+        .sentiment-badge {
+            padding: 0.25rem 0.5rem; border-radius: 4px;
+            font-size: 0.75rem; font-weight: bold;
+        }
+        .sentiment-positive { background: #22c55e; color: white; }
+        .sentiment-negative { background: #ef4444; color: white; }
+        .sentiment-neutral { background: #6b7280; color: white; }
+        .status-indicator {
+            display: inline-block; width: 10px; height: 10px;
+            border-radius: 50%; margin-right: 8px;
+        }
+        .status-connected { background: #22c55e; }
+        .status-disconnected { background: #ef4444; }
+        .live-feed { max-height: 400px; overflow-y: auto; }
+        .button { 
+            background: #0066cc; color: white; border: none;
+            padding: 0.5rem 1rem; border-radius: 4px;
+            cursor: pointer; margin: 0.5rem 0.5rem 0.5rem 0;
+        }
+        .button:hover { background: #0052a3; }
+        .info { background: #333; padding: 1rem; border-radius: 6px; margin-top: 2rem; }
+        code { background: #444; padding: 0.25rem; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ BrandGuard</h1>
+        <p>Real-time Brand Mention & Reputation Tracker</p>
+        
+        <div class="dashboard">
+            <div class="panel">
+                <h2>Recent Mentions</h2>
+                <div id="mentions-list">
+                    <p id="loading">Loading mentions...</p>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>
+                    <span id="ws-status" class="status-indicator status-disconnected"></span>
+                    Live Feed
+                </h2>
+                <p id="connection-info">Disconnected • 0 messages</p>
+                <div class="live-feed" id="live-feed">
+                    <p>No live messages yet. Run ingestion scripts to see updates.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>Quick Start</h3>
+            <p><strong>1. Start backend:</strong> <code>cd services/backend && uvicorn app.main:app --reload</code></p>
+            <p><strong>2. Generate test data:</strong> <code>python scripts/ingest_mock.py</code></p>
+            <p><strong>3. Test WebSocket:</strong> <code>python scripts/send_ws_demo.py</code></p>
+            <br>
+            <button class="button" onclick="fetchMentions()">Refresh Mentions</button>
+            <button class="button" onclick="connectWebSocket()">Connect Live Feed</button>
+            <button class="button" onclick="testWebSocket()">Send Test Message</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const WS_URL = 'ws://localhost:8000/ws/mentions';
+        let ws = null;
+        let messageCount = 0;
+
+        // Fetch mentions from API
+        async function fetchMentions() {
+            const listEl = document.getElementById('mentions-list');
+            try {
+                const response = await fetch(`${API_BASE}/api/mentions`);
+                const mentions = await response.json();
+                
+                if (mentions.length === 0) {
+                    listEl.innerHTML = '<p>No mentions found. Run ingestion scripts to populate data.</p>';
+                } else {
+                    listEl.innerHTML = mentions.map(mention => `
+                        <div class="mention-card">
+                            <div class="mention-header">
+                                <span class="source">${mention.source}</span>
+                                <span class="sentiment-badge sentiment-${mention.sentiment || 'neutral'}">
+                                    ${mention.sentiment || 'neutral'}
+                                </span>
+                            </div>
+                            <p class="mention-text">${mention.text}</p>
+                            <div class="mention-meta">
+                                <small>By: ${mention.author || 'Unknown'}</small>
+                                ${mention.published_at ? ` • ${new Date(mention.published_at).toLocaleString()}` : ''}
+                                ${mention.reach ? ` • Reach: ${Math.round(mention.reach)}` : ''}
+                            </div>
+                            ${mention.url ? `<a href="${mention.url}" target="_blank" rel="noopener noreferrer">View Source</a>` : ''}
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to fetch mentions:', error);
+                listEl.innerHTML = `<p>Error loading mentions. Make sure backend is running at ${API_BASE}</p>`;
+            }
+        }
+
+        // Connect WebSocket
+        function connectWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                console.log('WebSocket already connected');
+                return;
+            }
+
+            ws = new WebSocket(WS_URL);
+            const statusEl = document.getElementById('ws-status');
+            const infoEl = document.getElementById('connection-info');
+            
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                statusEl.className = 'status-indicator status-connected';
+                infoEl.textContent = `Connected • ${messageCount} messages`;
+            };
+
+            ws.onmessage = (event) => {
+                const liveEl = document.getElementById('live-feed');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'mention-card';
+                messageDiv.innerHTML = `
+                    <p>${event.data}</p>
+                    <small>${new Date().toLocaleString()}</small>
+                `;
+                
+                // Prepend new message
+                if (liveEl.firstChild && liveEl.firstChild.tagName === 'P') {
+                    liveEl.innerHTML = ''; // Clear the "no messages" text
+                }
+                liveEl.insertBefore(messageDiv, liveEl.firstChild);
+                
+                // Keep only last 10 messages
+                while (liveEl.children.length > 10) {
+                    liveEl.removeChild(liveEl.lastChild);
+                }
+                
+                messageCount++;
+                infoEl.textContent = `Connected • ${messageCount} messages`;
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                statusEl.className = 'status-indicator status-disconnected';
+                infoEl.textContent = `Disconnected • ${messageCount} messages`;
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                statusEl.className = 'status-indicator status-disconnected';
+                infoEl.textContent = `Error • ${messageCount} messages`;
+            };
+        }
+
+        // Send test message through WebSocket
+        function testWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(`Test message from dashboard at ${new Date().toLocaleTimeString()}`);
+            } else {
+                alert('WebSocket not connected. Click "Connect Live Feed" first.');
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchMentions();
+            connectWebSocket();
+        });
+
+        // Auto-refresh mentions every 30 seconds
+        setInterval(fetchMentions, 30000);
+    </script>
+</body>
+</html>
