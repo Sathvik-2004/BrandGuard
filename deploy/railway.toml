@@ -1,0 +1,34 @@
+# Railway deployment configuration
+version: 2
+
+environments:
+  production:
+    variables:
+      ENVIRONMENT: production
+      NODE_ENV: production
+
+services:
+  backend:
+    source: ./services/backend
+    variables:
+      PORT: 8000
+      CORS_ORIGINS: ${{frontend.RAILWAY_STATIC_URL}}
+    healthcheck:
+      path: /health
+      timeout: 30s
+      interval: 10s
+    
+  frontend:
+    source: ./web
+    variables:
+      VITE_API_URL: ${{backend.RAILWAY_PUBLIC_URL}}
+      VITE_WS_URL: wss://${{backend.RAILWAY_PUBLIC_DOMAIN}}
+
+  postgres:
+    image: postgres:15
+    variables:
+      POSTGRES_DB: brandguard
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${{POSTGRES_PASSWORD}}
+    volumes:
+      - /var/lib/postgresql/data
