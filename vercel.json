@@ -1,8 +1,24 @@
 {
-  "buildCommand": "cd web && npm install && npm run build",
-  "outputDirectory": "web/dist",
-  "installCommand": "cd web && npm install",
-  "framework": "vite",
+  "version": 2,
+  "builds": [
+    {
+      "src": "web/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist",
+        "buildCommand": "npm install && npm run build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
   "env": {
     "VITE_API_URL": "https://brandguard-production.up.railway.app",
     "VITE_WS_URL": "wss://brandguard-production.up.railway.app"

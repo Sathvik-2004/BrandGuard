@@ -22,8 +22,8 @@ interface Alert {
   resolved: boolean
 }
 
-const API_BASE = 'http://localhost:8000'
-const WS_URL = 'ws://localhost:8000/ws/mentions'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/mentions'
 
 function App() {
   const [mentions, setMentions] = useState<Mention[]>([])
