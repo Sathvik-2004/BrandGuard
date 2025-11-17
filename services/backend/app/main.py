@@ -21,7 +21,12 @@ else:
     print("Railway environment: NLP tasks disabled for initial deployment")
 
 # create tables (dev convenience)
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    print("Database tables created successfully")
+except Exception as e:
+    print(f"Database initialization warning: {e}")
+    # Continue anyway - tables might already exist
 
 app = FastAPI(title="BrandGuard API")
 

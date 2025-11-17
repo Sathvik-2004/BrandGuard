@@ -1,1 +1,1 @@
-web: cd services/backend && PYTHONPATH=/app/services/backend python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+web: cd services/backend && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
