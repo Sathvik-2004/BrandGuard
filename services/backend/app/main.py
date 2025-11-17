@@ -8,17 +8,9 @@ from .ws_manager import ConnectionManager
 from .db import SessionLocal, engine
 from .models import Base, Mention, Alert
 
-# Only import tasks if not in Railway environment (to avoid NLP dependency issues)
-if not os.getenv("RAILWAY_ENVIRONMENT"):
-    try:
-        import app.tasks as tasks
-        TASKS_ENABLED = True
-    except ImportError:
-        TASKS_ENABLED = False
-        print("Warning: NLP tasks disabled due to missing dependencies")
-else:
-    TASKS_ENABLED = False
-    print("Railway environment: NLP tasks disabled for initial deployment")
+# Disable NLP tasks for production deployment stability
+TASKS_ENABLED = False
+print("NLP tasks disabled for production deployment")
 
 # create tables (dev convenience)
 try:
@@ -38,7 +30,9 @@ app.add_middleware(
         "http://localhost:5174", 
         "http://localhost",
         "https://*.railway.app",
-        "https://*.up.railway.app"
+        "https://*.up.railway.app",
+        "https://brand-guard-sooty.vercel.app",
+        "https://*.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
