@@ -1,12 +1,24 @@
 import json
 import asyncio
+import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from .ws_manager import ConnectionManager
 from .db import SessionLocal, engine
 from .models import Base, Mention, Alert
-import app.tasks as tasks
+
+# Only import tasks if not in Railway environment (to avoid NLP dependency issues)
+if not os.getenv("RAILWAY_ENVIRONMENT"):
+    try:
+        import app.tasks as tasks
+        TASKS_ENABLED = True
+    except ImportError:
+        TASKS_ENABLED = False
+        print("Warning: NLP tasks disabled due to missing dependencies")
+else:
+    TASKS_ENABLED = False
+    print("Railway environment: NLP tasks disabled for initial deployment")
 
 # create tables (dev convenience)
 Base.metadata.create_all(bind=engine)
@@ -15,23 +27,35 @@ app = FastAPI(title="BrandGuard API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:5174", "http://localhost"],
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://localhost:3000", 
+        "http://localhost:5174", 
+        "http://localhost",
+        "https://*.railway.app",
+        "https://*.up.railway.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 manager = ConnectionManager()
-# expose manager to tasks module
-tasks.manager = manager
+
+# expose manager to tasks module only if tasks are enabled
+if TASKS_ENABLED:
+    tasks.manager = manager
 
 @app.on_event("startup")
 async def startup_event():
-    # start background periodic tasks
-    loop = asyncio.get_event_loop()
-    # run tasks.run_periodic_tasks in background
-    loop.create_task(tasks.run_periodic_tasks(interval_seconds=60))
-    print("Background tasks started.")
+    # start background periodic tasks only if enabled
+    if TASKS_ENABLED:
+        loop = asyncio.get_event_loop()
+        # run tasks.run_periodic_tasks in background
+        loop.create_task(tasks.run_periodic_tasks(interval_seconds=60))
+        print("Background tasks started.")
+    else:
+        print("Background tasks disabled - running in minimal mode")
 
 @app.get("/health")
 async def health():
