@@ -57,9 +57,32 @@ async def startup_event():
     else:
         print("Background tasks disabled - running in minimal mode")
 
+@app.get("/")
+async def root():
+    return {
+        "message": "🚀 BrandGuard API - Real-time Brand Monitoring System",
+        "version": "1.0.0",
+        "status": "active",
+        "features": {
+            "real_time_monitoring": True,
+            "sentiment_analysis": TASKS_ENABLED,
+            "topic_clustering": TASKS_ENABLED,
+            "spike_detection": TASKS_ENABLED
+        },
+        "endpoints": {
+            "health": "/health",
+            "api_docs": "/docs",
+            "mentions": "/api/mentions",
+            "alerts": "/api/alerts",
+            "websocket": "/ws/mentions"
+        },
+        "repository": "https://github.com/Sathvik-2004/BrandGuard",
+        "deployed_on": "Railway"
+    }
+
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "timestamp": "2025-11-17", "service": "BrandGuard API"}
 
 # Simple REST list mentions
 @app.get("/api/mentions")
@@ -144,6 +167,26 @@ async def create_mention(payload: dict):
         }
         await manager.broadcast(json.dumps(msg))
         return {"status": "ok", "id": m.id}
+    finally:
+        db.close()
+
+# REST endpoint to list alerts  
+@app.get("/api/alerts")
+def list_alerts(limit: int = 50):
+    """Get recent alerts"""
+    db = SessionLocal()
+    try:
+        alerts = db.query(Alert).order_by(Alert.created_at.desc()).limit(limit).all()
+        result = []
+        for alert in alerts:
+            result.append({
+                "id": alert.id,
+                "alert_type": alert.alert_type,
+                "message": alert.message,
+                "created_at": alert.created_at.isoformat() if alert.created_at else None,
+                "resolved": alert.resolved
+            })
+        return result
     finally:
         db.close()
 
