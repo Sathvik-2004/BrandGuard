@@ -1,0 +1,18 @@
+{
+  "name": "BrandGuard",
+  "description": "🚀 Real-time Brand Monitoring System with AI-powered sentiment analysis, topic clustering, and intelligent alerting",
+  "homepage": "https://brand-guard-sooty.vercel.app",
+  "topics": [
+    "brand-monitoring",
+    "real-time",
+    "sentiment-analysis",
+    "fastapi",
+    "react",
+    "typescript",
+    "websocket",
+    "nlp",
+    "alerts",
+    "dashboard"
+  ],
+  "private": false
+}
