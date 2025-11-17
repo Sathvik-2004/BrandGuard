@@ -10,7 +10,7 @@ from .models import Base, Mention, Alert
 
 # Disable NLP tasks for production deployment stability
 TASKS_ENABLED = False
-print("NLP tasks disabled for production deployment")
+print("NLP tasks disabled for production deployment stability")
 
 # create tables (dev convenience)
 try:
