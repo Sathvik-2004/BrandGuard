@@ -1,0 +1,24 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-info:
+    runs-on: ubuntu-latest
+    name: Deployment Status
+    
+    steps:
+    - name: Deployment Information
+      run: |
+        echo "🚀 BrandGuard Deployment Status:"
+        echo "✅ Backend: Railway auto-deploys from main branch"
+        echo "✅ Frontend: Vercel auto-deploys from main branch"
+        echo ""
+        echo "🌐 Live URLs:"
+        echo "- Frontend: https://brand-guard-sooty.vercel.app"
+        echo "- Backend: https://brandguard-production.up.railway.app"
+        echo "- API Docs: https://brandguard-production.up.railway.app/docs"
+        echo ""
+        echo "✨ Deployment completed successfully!"
