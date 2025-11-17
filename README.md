@@ -1,5 +1,9 @@
 # 📘 BrandGuard — Real-time Brand Mention & Reputation Monitoring System
 
+🚀 **LIVE DEMO**: 
+- **Backend API**: https://brandguard-production.up.railway.app
+- **Frontend**: Deploying on Vercel...
+
 BrandGuard is a full-stack real-time monitoring tool designed to help marketing teams track brand mentions, analyze sentiment, detect trending topics, and get alerts during sudden spikes in brand conversations.
 
 This system includes:
